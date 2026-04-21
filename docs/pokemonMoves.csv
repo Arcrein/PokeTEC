@@ -1,0 +1,44 @@
+tipo,nombre,categoria,poder,pokemons
+Ghost,Shadow Ball,Special,80,gengar zoroark gardevoir
+Dark,Dark Pulse,Special,80,gengar zoroark lucario tyranitar umbreon
+Poison,Sludge Bomb,Special,90,gengar venusaur
+Fire,Flamethrower,Special,90,charizard dragonite lucario tyranitar zoroark
+Fire,Fire Blast,Special,110,charizard dragonite tyranitar
+Water,Hydro Pump,Special,110,blastoise gyarados samurott
+Water,Surf,Special,90,blastoise gyarados samurott
+Electric,Thunderbolt,Special,90,gengar blastoise charizard gardevoir luxray
+Ice,Ice Beam,Special,90,blastoise dragonite gardevoir samurott
+Dragon,Dragon Pulse,Special,85,charizard dragonite gardevoir
+Psychic,Psychic,Special,90,gengar gardevoir metagross
+Fighting,Aura Sphere,Special,80,gardevoir lucario
+Grass,Energy Ball,Special,90,gengar gardevoir venusaur
+Fairy,Moonblast,Special,95,gardevoir
+Steel,Flash Cannon,Special,80,lucario
+Dark,Night Daze,Special,85,zoroark
+Dark,Snarl,Special,55,umbreon luxray zoroark
+Dragon,Dragon Claw,Physical,80,charizard dragonite garchomp haxorus
+Dragon,Outrage,Physical,120,dragonite garchomp gyarados haxorus tyranitar
+Ground,Earthquake,Physical,100,dragonite garchomp haxorus metagross snorlax tyranitar venusaur
+Rock,Stone Edge,Physical,100,garchomp haxorus tyranitar
+Water,Waterfall,Physical,80,blastoise gyarados samurott
+Water,Aqua Tail,Physical,90,dragonite gyarados haxorus samurott
+Bug,X-Scissor,Physical,80,garchomp haxorus samurott scizor
+Bug,U-turn,Physical,70,scizor zoroark
+Steel,Iron Head,Physical,80,haxorus lucario metagross scizor tyranitar
+Steel,Meteor Mash,Physical,90,metagross lucario
+Steel,Bullet Punch,Physical,40,lucario metagross scizor
+Fighting,Close Combat,Physical,120,lucario
+Dark,Crunch,Physical,80,gyarados luxray snorlax tyranitar
+Dark,Foul Play,Physical,95,umbreon
+Dark,Payback,Physical,50,umbreon tyranitar
+Normal,Body Slam,Physical,85,dragonite snorlax
+Normal,Heavy Slam,Physical,1,metagross snorlax
+Grass,Power Whip,Physical,120,venusaur
+Grass,Seed Bomb,Physical,80,venusaur
+Poison,Gunk Shot,Physical,120,venusaur
+Ice,Ice Fang,Physical,65,gyarados luxray
+Fire,Fire Fang,Physical,65,luxray
+Electric,Thunder Fang,Physical,65,luxray
+Psychic,Psychic Fangs,Physical,85,luxray
+Psychic,Zen Headbutt,Physical,80,metagross snorlax
+Rock,Rock Slide,Physical,75,garchomp haxorus tyranitar
