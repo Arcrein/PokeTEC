@@ -35,7 +35,6 @@ class PokemonEspecie:
             back_gif=carpeta_base / fila["back_gif"],
         )
 
-
 def loadPokemons(ruta_csv: str) -> list[PokemonEspecie]:
     ruta_csv = Path(ruta_csv)
     carpeta_base = ruta_csv.parent
@@ -64,3 +63,45 @@ def loadGif(ruta_gif):
             break
 
     return frames
+
+@dataclass
+class PokemonMove:
+    id: int
+    tipo: str
+    nombre: str
+    categoria: str
+    poder: int
+    pokemons: list[str]
+
+    @classmethod
+    def cargarDatosCsv(cls, fila: dict, index: int):
+        return cls(
+            id=index,
+            tipo=fila["tipo"],
+            nombre=fila["nombre"],
+            categoria=fila["categoria"],
+            poder=fila["poder"],
+            pokemons=fila["pokemons"].split()
+        )
+    
+def loadMoves(ruta_csv: str) -> list[PokemonMove]:
+    ruta_csv = Path(ruta_csv)
+
+    moves = []
+
+    with open(ruta_csv, newline="", encoding="utf-8-sig") as archivo:
+        lector = csv.DictReader(archivo)
+        index = 0
+        for fila in lector:
+            moves.append(PokemonMove.cargarDatosCsv(fila, index))
+            index=index+1
+
+    return moves
+
+
+@dataclass
+class Pokemon:
+    Especie: PokemonEspecie
+    Movimientos: list[PokemonMove]
+    Vida: int
+    

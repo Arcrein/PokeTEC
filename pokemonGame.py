@@ -1,4 +1,4 @@
-import Core.PokemonEspecie as Pk
+import Core.PokemonLib as Pk
 import tkinter as tk
 import Core.StartMenu as SM
 import Core.SelectChar as SC
@@ -37,6 +37,8 @@ class App(tk.Tk):
         self.currentScreen=screen
         self.currentScreen.frm.pack(fill="both", expand=True)
     
-
+m=Pk.loadMoves("docs\pokemonMoves.csv")
+for mst in m:
+    print(mst.nombre)
 app = App()
 app.mainloop()
