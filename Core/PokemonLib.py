@@ -2,6 +2,7 @@ import tkinter as tk
 import csv
 from dataclasses import dataclass
 from pathlib import Path
+import random
 
 @dataclass
 class PokemonEspecie:
@@ -102,6 +103,21 @@ def loadMoves(ruta_csv: str) -> list[PokemonMove]:
 @dataclass
 class Pokemon:
     Especie: PokemonEspecie
-    Movimientos: list[PokemonMove]
-    Vida: int
-    
+    Moveset: list[PokemonMove]
+    Health: int
+
+    @classmethod
+    def newPokemon(cls, especie:PokemonEspecie, fullMoveList: list[PokemonMove]):
+        activeMoves=[]
+        for move in fullMoveList:
+            if especie.name in move.pokemons:
+                activeMoves.append(move)
+        while len(activeMoves)>4:
+            toRemoveIndex=random.randint(0,len(activeMoves)-1)
+            activeMoves.remove(activeMoves[toRemoveIndex])
+
+        return cls(
+            Especie=especie,
+            Health=especie.hp,
+            Moveset=activeMoves
+        )

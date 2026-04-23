@@ -15,10 +15,11 @@ class SelectChar:
         self.selectedCallBack=selectCallBack
         self.frm.create_text(252,52,text="Choose your character",fill="black",font=titleFont)
         self.frm.create_text(250,50,text="Choose your character",fill="violet",font=titleFont)
-        self.setUpButton("Wen", 50, 100)
-        self.setUpButton("Dani", 160, 100)
-        self.setUpButton("Alex", 270, 100)
-        self.setUpButton("Nicu", 380, 100)
+        self.setUpButton("Wen", 9, 100)
+        self.setUpButton("Dani", 108, 100)
+        self.setUpButton("Alex", 207, 100)
+        self.setUpButton("Nicu", 306, 100)
+        self.setUpButton("Mat", 405, 100)
 
     def onEnter(self, charName):
         self.frm.itemconfig(self.charButton[charName],image=self.charMouseimg[charName])
