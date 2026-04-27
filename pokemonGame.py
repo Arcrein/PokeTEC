@@ -29,9 +29,6 @@ class App(tk.Tk):
         self.resizable(False,False)
         self.frm = tk.Frame(self, width=512, height=384, background="red")
         self.frm.pack(fill="both", expand=True)
-        #bg = tk.PhotoImage(file="assets\img\Battleground.png")S
-        #lbg = tk.Label(root,image=bg)
-        #lbg.place(x=0,y=0,relwidth=1,relheight=1)
         self.screen1 = SM.StartMenu(self.frm, self.startCallBack)
         self.screen2 = SC.SelectChar(self.frm, self.selectedCallBack)
         self.screen3 = SP.SelectPoke(self.frm, self.selectedPokemons)
