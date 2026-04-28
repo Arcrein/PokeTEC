@@ -20,8 +20,11 @@ class App(tk.Tk):
         self.showScreen(self.screen4)
         self.screen4.startCombant()
     
-    def battleCallBack(self,pokemons):
-        print("funca")
+    def battleCallBack(self,puntaje):
+        print(f"El jugador hizo {puntaje} puntos")
+        score=Pk.Leaderboard(0,self.screen1.playerName,puntaje)
+        self.scoreboard.append(score)
+        Pk.salvarLiderboard(self.scoreboard, "docs\scores.csv")
 
     def __init__(self):
         super().__init__()
@@ -34,6 +37,7 @@ class App(tk.Tk):
         self.screen3 = SP.SelectPoke(self.frm, self.selectedPokemons)
         self.screen4 = BS.BattleScreen(self.frm, self.battleCallBack, self.screen3)
         self.currentScreen=self.screen1
+        self.scoreboard:list[Pk.Leaderboard] = Pk.loadScores("docs\scores.csv")
 
     def showScreen(self,screen):
         if self.currentScreen:

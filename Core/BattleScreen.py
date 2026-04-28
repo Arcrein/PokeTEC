@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import font
+from tkinter import ttk
 import Core.SelectPoke as SP
 import Core.PokemonLib as Pk
 import math
@@ -14,13 +15,16 @@ class BattleState(Enum):
     EnemyPokemon=3
     PlayerOutro=4
     PlayerPokemon=5
-    StaringCombatStart=6
+    StartingCombatStart=6
     CombatStart=7
     PlayerFight=8
     EnemyFight=9
-    BagAction=10
-    RunAction=11
+    PlayerPokemonOut=10
+    EnemyPokemonOut=11
     PkChangeAction=12
+    NextEnemyPoke=13
+    NextPlayerPoke=14
+    Waiting=100
 
 class BattleScreen:
     def __init__(self, root, battleCallBack, selectedPoke: SP.SelectPoke):
@@ -39,12 +43,54 @@ class BattleScreen:
         self.effectiveness:list[Pk.PokemonEffectiveness]=Pk.loadEffectiveness("docs\pokemonEffectiveness.csv")
         self.characters=["Alex","Wen","Nicu","Dani","Mat"]
         self.visualControlText=-1
-        self.currentEnemyPkPlacement=self.frm.create_image(382, 135, image=None, anchor="center")
-        self.currentPlayerPkPlacement=self.frm.create_image(166, 240, image=None, anchor="center")
+        self.enemyPokemonPos=382
+        self.currentEnemyPkPlacement=self.frm.create_image(self.enemyPokemonPos, 135, image=None, anchor="center")
+        self.playerPokemonPos=166
+        self.currentPlayerPkPlacement=self.frm.create_image(self.playerPokemonPos, 240, image=None, anchor="center")
         self.buttonBar=tk.PhotoImage(file="assets/img/buttonBar.png")
         self.enemyPokeScale=1.7
         self.playerPokeScale=1.7
         self.runningText = False
+        self.attackNum=0
+        self.attackSpeedAnim=6
+        self.selectPokemonControl=ttk.Treeview(self.frm)
+        self.selectPokemonControl["columns"]=("name",)
+        self.selectPokemonControl.column("#0",width=50)
+        self.selectPokemonControl.column("name",width=150)
+        self.selectPokemonControl.heading("name",text="Pokemon")
+        self.style=ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("Custom.Treeview",font=self.captionFont,rowheight=50,background="royalblue",fieldbackground="royalblue",foreground="white")
+        self.style.configure("Custom.Treeview.Heading",font=self.titleFont)
+        self.selectPokemonControl.configure(style="Custom.Treeview")
+        self.selectPokemonControl.bind("<<TreeviewSelect>>",self.onSelectPoke)
+        self.selPkImg={}
+        self.targetPlayerPoke = 0
+        self.puntuacion = 0
+
+    def onSelectPoke(self,event):
+        selected=self.selectPokemonControl.selection()
+        if selected:
+            item_id = selected[0]
+            item = self.selectPokemonControl.item(item_id)
+            pkId = item["values"][1]
+            self.hideSelectPoke()
+            self.targetPlayerPoke = next((i for i, p in enumerate(self.playerPokemons) if p.id == pkId), None)
+            self.currentState = BattleState.PlayerPokemonOut
+            
+
+    def fillPokeList(self):
+        self.selectPokemonControl.delete(*self.selectPokemonControl.get_children())
+        for pk in self.playerPokemons:
+            self.selPkImg[pk.id]=tk.PhotoImage(file=f"assets\img\{pk.Especie.name}.png").subsample(2,2)
+            self.selectPokemonControl.insert("","end",text="",image=self.selPkImg[pk.id],values=(pk.Especie.name,pk.id))
+
+    def showSelectPoke(self):
+        self.fillPokeList()
+        self.selectPokemonControl.pack(fill="both",expand=True)
+
+    def hideSelectPoke(self):
+        self.selectPokemonControl.pack_forget()
 
     def SetSelectedCharacter(self, name):
         self.selectedCharacter = name
@@ -55,14 +101,17 @@ class BattleScreen:
     def startCombant(self):
         self.currentState=BattleState.EnemyIntro
         self.playerPokemons:list[Pk.Pokemon]=[]
+        idPk =0
         for p in self.selectedPokes.selectedPokemons:
-            self.playerPokemons.append(Pk.Pokemon.newPokemon(self.selectedPokes.pokeList[p],self.movementList))
+            self.playerPokemons.append(Pk.Pokemon.newPokemon(idPk,self.selectedPokes.pokeList[p],self.movementList))
+            idPk = idPk + 1
         self.characters.remove(self.selectedCharacter)
         self.selectedEnemyChar=self.characters.pop(random.randint(0,len(self.characters)-1))
         self.enemyPokemons:list[Pk.Pokemon]=[]
         for i in range(0,3):
             pok=self.selectedPokes.pokeList[random.randint(0,len(self.selectedPokes.pokeList)-1)]
-            self.enemyPokemons.append(Pk.Pokemon.newPokemon(pok,self.movementList))
+            self.enemyPokemons.append(Pk.Pokemon.newPokemon(idPk, pok,self.movementList))
+            idPk = idPk + 1
         self.setUpChar()
         self.enemyIntro=True
         self.frm.create_image(512/2, 342, image=self.buttonBar, anchor="center")
@@ -72,6 +121,7 @@ class BattleScreen:
         if self.visualControlText==-1:
             self.visualControlText=self.frm.create_text(512/2,340,text=self.actualText,fill="black",font=self.titleFont,anchor="center",width=500)
         self.ButtonsImg={}
+        self.ButtonsImgDis={}
         self.Buttons={}
         self.AttackButton= []
         self.AttactLabel = []
@@ -94,6 +144,37 @@ class BattleScreen:
         self.createAttackButton(185,338)
         self.hideAttackButtons()
 
+    def newEnemyPk(self,nextState):
+        self.animateText(self.selectedEnemyChar+" envio a "+self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name)
+        self.currentEnemyPkImg=Pk.loadGif(f"assets\gif\{self.enemyPokemons[self.currentEnemyPokeIndex].Especie.front_gif}",1.7)
+        self.currentEnemyPkFrm=0
+        w,h = self.currentEnemyPkImg[self.currentEnemyPkFrm].size
+        self.enemyPokeScale=0.2
+        self.currentEnemyPkFrmImg=ImageTk.PhotoImage(self.currentEnemyPkImg[self.currentEnemyPkFrm].resize((int(w*self.enemyPokeScale),int(h*self.enemyPokeScale)),Image.Resampling.LANCZOS))
+        self.frm.itemconfig(self.currentEnemyPkPlacement,image=self.currentEnemyPkFrmImg)
+        self.showEnemyLifeBar(self.enemyPokemons[self.currentEnemyPokeIndex])
+        self.currentState=nextState
+
+    def newPlayerPk(self,nextState):
+        self.animateText(self.playerName+" envio a "+self.playerPokemons[self.currentPlayerPokeIndex].Especie.name)
+        self.currentPlayerPkImg=Pk.loadGif(f"assets\gif\{self.playerPokemons[self.currentPlayerPokeIndex].Especie.back_gif}",1.7)
+        self.currentPlayerPkFrm=0
+        w,h = self.currentPlayerPkImg[self.currentPlayerPkFrm].size
+        self.playerPokeScale=0.2
+        self.currentPlayerPkFrmImg=ImageTk.PhotoImage(self.currentPlayerPkImg[self.currentPlayerPkFrm].resize((int(w*self.playerPokeScale),int(h*self.playerPokeScale)),Image.Resampling.LANCZOS))
+        self.frm.itemconfig(self.currentPlayerPkPlacement,image=self.currentPlayerPkFrmImg)
+        self.showPlayerLifeBar(self.playerPokemons[self.currentPlayerPokeIndex])
+        self.currentState=nextState
+
+    def disableButtons(self):
+        for btName in self.Buttons:
+            self.frm.itemconfig(self.Buttons[btName],image=self.ButtonsImgDis[btName])
+            self.frm.tag_unbind(self.Buttons[btName], "<Button-1>")
+
+    def enableButtons(self):
+        for btName in self.Buttons:
+            self.frm.itemconfig(self.Buttons[btName],image=self.ButtonsImg[btName])
+            self.frm.tag_bind(self.Buttons[btName], "<Button-1>", lambda e, name=btName: self.onClick(name))
     
     def moveChar(self):
         if self.currentState == BattleState.EnemyIntro:
@@ -121,15 +202,8 @@ class BattleScreen:
                 dx=max((x-self.targetEnemyImg)*0.1,-0.1)
                 self.frm.move(self.enemyImgPlacement,dx,0)
             if x>=513:
-                self.currentState=BattleState.EnemyPokemon
                 self.currentEnemyPokeIndex=0
-                self.animateText(self.selectedEnemyChar+" envio a "+self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name)
-                self.currentEnemyPkImg=Pk.loadGif(f"assets\gif\{self.enemyPokemons[self.currentEnemyPokeIndex].Especie.front_gif}",1.7)
-                self.currentEnemyPkFrm=0
-                w,h = self.currentEnemyPkImg[self.currentEnemyPkFrm].size
-                self.enemyPokeScale=0.2
-                self.currentEnemyPkFrmImg=ImageTk.PhotoImage(self.currentEnemyPkImg[self.currentEnemyPkFrm].resize((int(w*self.enemyPokeScale),int(h*self.enemyPokeScale)),Image.Resampling.LANCZOS))
-                self.frm.itemconfig(self.currentEnemyPkPlacement,image=self.currentEnemyPkFrmImg)
+                self.newEnemyPk(BattleState.EnemyPokemon)
                 
         
         elif self.currentState == BattleState.EnemyPokemon:
@@ -156,13 +230,13 @@ class BattleScreen:
                 self.playerPokeScale=0.2
                 self.playerPermaAnim(self.playerPokeScale)
         
-        elif self.currentState == BattleState.PlayerPokemon or self.currentState == BattleState.StaringCombatStart:
+        elif self.currentState == BattleState.PlayerPokemon or self.currentState == BattleState.StartingCombatStart:
             self.enemyPermaAnim(self.enemyPokeScale)
             if self.playerPokeScale < 1:
                 self.playerPokeScale=self.playerPokeScale+0.05
             else:
                 if self.currentState == BattleState.PlayerPokemon:
-                    self.currentState = BattleState.StaringCombatStart
+                    self.currentState = BattleState.StartingCombatStart
                     self.frm.after(3000,self.startBattle)
             self.playerPermaAnim(self.playerPokeScale)
             
@@ -170,7 +244,97 @@ class BattleScreen:
         elif self.currentState == BattleState.CombatStart:
             self.enemyPermaAnim(self.enemyPokeScale)
             self.playerPermaAnim(self.playerPokeScale)
-            
+
+        
+        elif self.currentState == BattleState.PlayerFight:
+            self.enemyPermaAnim(self.enemyPokeScale)
+            self.playerPermaAnim(self.playerPokeScale)
+            x,y=self.frm.coords(self.currentPlayerPkPlacement)
+            if self.startingAttack==True and x>=self.playerPokemonPos-50:
+                self.frm.move(self.currentPlayerPkPlacement,-self.attackSpeedAnim,0)
+            else:
+                self.startingAttack=False
+                if x<self.playerPokemonPos:
+                    self.frm.move(self.currentPlayerPkPlacement,self.attackSpeedAnim,0)
+                else:
+                    if not self.attackCompleted:
+                        self.attackCompleted = True
+                        self.playerDealDamage()
+        
+        elif self.currentState == BattleState.EnemyFight:
+            self.enemyPermaAnim(self.enemyPokeScale)
+            self.playerPermaAnim(self.playerPokeScale)
+            x,y=self.frm.coords(self.currentEnemyPkPlacement)
+            if self.startingAttack==True and x>=self.enemyPokemonPos-50:
+                self.frm.move(self.currentEnemyPkPlacement,-self.attackSpeedAnim,0)
+            else:
+                self.startingAttack=False
+                if x<self.enemyPokemonPos:
+                    self.frm.move(self.currentEnemyPkPlacement,self.attackSpeedAnim,0)
+                else:
+                    if not self.attackCompleted:
+                        self.attackCompleted = True
+                        self.enemyDealDamage()
+        
+        elif self.currentState == BattleState.NextEnemyPoke:
+            if self.enemyPokeScale < 1:
+                self.enemyPokeScale=self.enemyPokeScale+0.05
+            else:
+                self.currentState = BattleState.CombatStart
+                self.enableButtons()
+            self.enemyPermaAnim(self.enemyPokeScale)
+            self.playerPermaAnim(self.playerPokeScale)
+
+        elif self.currentState == BattleState.NextPlayerPoke:
+            self.enemyPermaAnim(self.enemyPokeScale)
+            if self.playerPokeScale < 1.4:
+                self.playerPokeScale=self.playerPokeScale+0.05
+            else:
+                self.currentState = BattleState.CombatStart
+                self.enableButtons()
+            self.playerPermaAnim(self.playerPokeScale)
+
+        elif self.currentState == BattleState.PlayerPokemonOut:
+            if self.playerPokeScale > 0.2:
+                self.playerPokeScale=self.playerPokeScale-0.05
+            else:
+                if self.playerPokemons[self.currentPlayerPokeIndex].Health == 0:
+                    deadPoke=self.playerPokemons.pop(self.currentPlayerPokeIndex)
+                    deadPoke.Health=deadPoke.MaxHealth
+                    self.enemyPokemons.append(deadPoke)
+                    if len(self.playerPokemons)>0:
+                        self.showSelectPoke()
+                    else:
+                        self.battleCallBack(self.puntuacion)
+                    self.currentState = BattleState.Waiting
+                else:
+                    self.currentPlayerPokeIndex = self.targetPlayerPoke
+                    self.newPlayerPk(BattleState.NextPlayerPoke)
+               
+            self.enemyPermaAnim(self.enemyPokeScale)
+            self.playerPermaAnim(self.playerPokeScale)
+        
+        elif self.currentState == BattleState.EnemyPokemonOut:
+            self.playerPermaAnim(self.playerPokeScale)
+            if self.enemyPokeScale > 0.2:
+                self.enemyPokeScale=self.enemyPokeScale-0.05
+            else:
+                deadPoke=self.enemyPokemons.pop(self.currentEnemyPokeIndex)
+                deadPoke.Health=deadPoke.MaxHealth
+                self.playerPokemons.append(deadPoke)
+                self.puntuacion = self.puntuacion + 1
+                if len(self.enemyPokemons)>0:
+                    self.currentEnemyPokeIndex=random.randint(0,len(self.enemyPokemons)-1)
+                    self.frm.after(3000,self.newEnemyPk,BattleState.NextEnemyPoke)
+                else:
+                    self.battleCallBack(self.puntuacion)
+                self.currentState = BattleState.Waiting
+            self.enemyPermaAnim(self.enemyPokeScale)
+        
+        elif self.currentState == BattleState.Waiting:
+            self.enemyPermaAnim(self.enemyPokeScale)
+            self.playerPermaAnim(self.playerPokeScale)
+
         
         self.frm.after(35,self.moveChar)
 
@@ -223,17 +387,34 @@ class BattleScreen:
         self.frm.itemconfig(self.playerLifeBarBg,state="normal")
         self.frm.itemconfig(self.playerPkNameLbl,state="normal",text=pokemon.Especie.name)
         self.frm.itemconfig(self.playerPkLifeBar,state="normal")
-        self.frm.itemconfig(self.lifeNum,state="normal",text=f"{int(pokemon.Health)}/{int(pokemon.MaxHealth)}")
         self.updatePlayerLifeBar(pokemon)
     
     def updatePlayerLifeBar(self,pokemon:Pk.Pokemon):
         hpPercent=pokemon.Health/pokemon.MaxHealth
         maxWidth=499-404
         newX=404+(maxWidth*hpPercent)
+        self.frm.itemconfig(self.lifeNum,state="normal",text=f"{int(pokemon.Health)}/{int(pokemon.MaxHealth)}")
         self.frm.coords(self.playerPkLifeBar,404,252,newX,257)
 
     def playerDoAttack(self,movement:int):
-        pkmovement=self.playerPokemons[self.currentPlayerPokeIndex].Moveset[movement]
+        self.disableButtons()
+        self.PlayerAttackToUse=movement
+        self.EnemyAttackToUse=random.randint(0,3)
+        pkmovement=self.playerPokemons[self.currentPlayerPokeIndex].Moveset[self.PlayerAttackToUse]
+        enemyMovement=self.enemyPokemons[self.currentEnemyPokeIndex].Moveset[self.EnemyAttackToUse]
+        self.hideAttackButtons()
+        self.attackNum=0
+        self.startingAttack=True
+        self.attackCompleted = False
+        if self.playerPokemons[self.currentPlayerPokeIndex].Especie.speed >= self.enemyPokemons[self.currentEnemyPokeIndex].Especie.speed:
+            self.currentState=BattleState.PlayerFight
+            self.animateText(f"{self.playerPokemons[self.currentPlayerPokeIndex].Especie.name} uso {pkmovement.nombre}")
+        else:
+            self.currentState=BattleState.EnemyFight
+            self.animateText(f"{self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name} uso {enemyMovement.nombre}")
+
+    def playerDealDamage(self):
+        pkmovement=self.playerPokemons[self.currentPlayerPokeIndex].Moveset[self.PlayerAttackToUse]
         dmg,mod=Pk.dmgCalc(self.effectiveness,
                        self.playerPokemons[self.currentPlayerPokeIndex],
                        pkmovement,
@@ -244,19 +425,75 @@ class BattleScreen:
             self.enemyPokemons[self.currentEnemyPokeIndex].Health = 0
 
         self.updateEnemyLifeBar(self.enemyPokemons[self.currentEnemyPokeIndex])
-        self.hideAttackButtons()
-        self.animateText(f"{self.playerPokemons[self.currentPlayerPokeIndex].Especie.name} uso {pkmovement.nombre}")
-        self.waitForAnimText(self.showEffectiveness,mod)
+        self.attackNum=self.attackNum+1
+        self.waitForAnimText(self.showEffectiveness,mod,True)
 
-    def showEffectiveness(self, mod):
+    def enemyDealDamage(self):
+        pkmovement=self.enemyPokemons[self.currentEnemyPokeIndex].Moveset[self.EnemyAttackToUse]
+        dmg,mod=Pk.dmgCalc(self.effectiveness,
+                       self.enemyPokemons[self.currentEnemyPokeIndex],
+                       pkmovement,
+                       self.playerPokemons[self.currentPlayerPokeIndex]
+                       )
+        self.playerPokemons[self.currentPlayerPokeIndex].Health=self.playerPokemons[self.currentPlayerPokeIndex].Health-dmg
+        if self.playerPokemons[self.currentPlayerPokeIndex].Health <= 0:
+            self.playerPokemons[self.currentPlayerPokeIndex].Health = 0
+
+        self.updatePlayerLifeBar(self.playerPokemons[self.currentPlayerPokeIndex])
+        self.attackNum=self.attackNum+1
+        self.waitForAnimText(self.showEffectiveness,mod,False)
+
+    def showEffectiveness(self, mod,isPlayer):
         if mod == 4:
             self.animateText("El ataque fue super efectivo")
         elif mod == 2:
             self.animateText("El ataque fue efectivo")
         elif mod <= 0.5:
             self.animateText("El ataque fue poco efectivo")
+        self.frm.after(3000, self.CheckNextAttack, isPlayer)
+    
+    def CheckNextAttack(self, isPlayer):
+        if self.attackNum < 2:
+            if isPlayer == True:
+                if self.enemyPokemons[self.currentEnemyPokeIndex].Health>0:
+                    self.currentState=BattleState.EnemyFight
+                    self.startingAttack=True
+                    self.attackCompleted = False
+                    enemyMovement=self.enemyPokemons[self.currentEnemyPokeIndex].Moveset[self.EnemyAttackToUse]
+                    self.animateText(f"{self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name} uso {enemyMovement.nombre}")
+                else:
+                    self.currentState=BattleState.EnemyPokemonOut
+                    self.animateText(f"El {self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name} de {self.selectedEnemyChar} ya no puede continuar")
+            else:
+                if self.playerPokemons[self.currentPlayerPokeIndex].Health>0:
+                    self.currentState=BattleState.PlayerFight
+                    self.startingAttack=True
+                    self.attackCompleted = False
+                    pkmovement=self.playerPokemons[self.currentPlayerPokeIndex].Moveset[self.PlayerAttackToUse]
+                    self.animateText(f"{self.playerPokemons[self.currentPlayerPokeIndex].Especie.name} uso {pkmovement.nombre}")
+                else:
+                    self.currentState=BattleState.PlayerPokemonOut
+                    self.animateText(f"{self.playerPokemons[self.currentPlayerPokeIndex].Especie.name} ya no puede continuar") 
         else:
-            pass
+            if isPlayer == True:
+                if self.enemyPokemons[self.currentEnemyPokeIndex].Health == 0:
+                    self.currentState=BattleState.EnemyPokemonOut
+                    self.animateText(f"El {self.enemyPokemons[self.currentEnemyPokeIndex].Especie.name} de {self.selectedEnemyChar} ya no puede continuar")
+                else:
+                    self.attackNum=0
+                    self.currentState=BattleState.CombatStart
+                    self.animateText(f"Que quires que haga {self.playerPokemons[self.currentPlayerPokeIndex].Especie.name}?")
+                    self.enableButtons()
+            else:
+                if self.playerPokemons[self.currentPlayerPokeIndex].Health == 0:
+                    self.currentState=BattleState.PlayerPokemonOut
+                    self.animateText(f"{self.playerPokemons[self.currentPlayerPokeIndex].Especie.name} ya no puede continuar") 
+                else:
+                    self.attackNum=0
+                    self.currentState=BattleState.CombatStart
+                    self.animateText(f"Que quires que haga {self.playerPokemons[self.currentPlayerPokeIndex].Especie.name}?")
+                    self.enableButtons()
+
 
     def createAttackButton(self,x,y):
         self.AttackButton.append(self.frm.create_rectangle(x,y, x+180, y+40, fill="whitesmoke", outline="dimgray", width=2))
@@ -333,12 +570,14 @@ class BattleScreen:
         elif btName == "bag":
             print(btName)
         elif btName == "pokemon":
-            print(btName)
+            self.showSelectPoke()
         elif btName == "run":
             print(btName)
     
     def setUpButton(self, btName, x, y):
-        self.ButtonsImg[btName] = tk.PhotoImage(file="assets/img/"+btName+".png")
+        img=Image.open("assets/img/"+btName+".png")
+        self.ButtonsImg[btName] = ImageTk.PhotoImage(img)
+        self.ButtonsImgDis[btName]=ImageTk.PhotoImage(img.convert("L"))
         self.Buttons[btName] = self.frm.create_image(x, y, image=self.ButtonsImg[btName], anchor="nw")
         self.frm.tag_bind(self.Buttons[btName], "<Button-1>", lambda e, name=btName: self.onClick(name))
 

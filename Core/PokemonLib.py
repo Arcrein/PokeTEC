@@ -1,6 +1,7 @@
 import tkinter as tk
 import csv
 from dataclasses import dataclass
+from dataclasses import asdict
 from pathlib import Path
 import random
 from PIL import Image,ImageTk,ImageSequence
@@ -97,13 +98,14 @@ def loadMoves(ruta_csv: str) -> list[PokemonMove]:
 
 @dataclass
 class Pokemon:
+    id: int
     Especie: PokemonEspecie
     Moveset: list[PokemonMove]
     Health: int
     MaxHealth: int
 
     @classmethod
-    def newPokemon(cls, especie:PokemonEspecie, fullMoveList: list[PokemonMove]):
+    def newPokemon(cls, id:int, especie:PokemonEspecie, fullMoveList: list[PokemonMove]):
         iv=31
         ev=252
         lvl=100
@@ -117,6 +119,7 @@ class Pokemon:
         MaxHp=(((iv+2*especie.hp+ev/4)*lvl)/100)+lvl+10
 
         return cls(
+            id=id,
             Especie=especie,
             Health=MaxHp,
             MaxHealth=MaxHp,
@@ -184,6 +187,50 @@ def loadEffectiveness(ruta_csv: str) -> list[PokemonEffectiveness]:
             index=index+1
 
     return effectiveness
+
+
+@dataclass
+class Leaderboard:
+    id: int
+    PlayerName: str
+    Puntaje: int
+
+    @classmethod
+    def cargarDatosCsv(cls, fila: dict, index: int):
+        return cls(
+            id=index,
+            PlayerName=fila["PlayerName"],
+            Puntaje=float(fila["Puntaje"]),
+        )
+    
+
+def salvarLiderboard(board, filePath):
+    with open(filePath,"w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["id", "PlayerName", "Puntaje"]
+        )
+
+        writer.writeheader()
+
+        for item in board:
+            writer.writerow(asdict(item))
+
+def loadScores(ruta_csv: str) -> list[Leaderboard]:
+    ruta_csv = Path(ruta_csv)
+
+    scores = []
+
+    with open(ruta_csv, newline="", encoding="utf-8-sig") as archivo:
+        lector = csv.DictReader(archivo)
+        index = 0
+        for fila in lector:
+            scores.append(Leaderboard.cargarDatosCsv(fila, index))
+            index=index+1
+
+    return scores
+    
+
 
 def dmgCalc(effectiveness:list[PokemonEffectiveness],attaker:Pokemon,move:PokemonMove,defender:Pokemon) :
     lvl=100
