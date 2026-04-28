@@ -106,7 +106,7 @@ class Pokemon:
 
     @classmethod
     def newPokemon(cls, id:int, especie:PokemonEspecie, fullMoveList: list[PokemonMove]):
-        iv=31
+        iv=random.randint(0,31)
         ev=252
         lvl=100
         activeMoves=[]

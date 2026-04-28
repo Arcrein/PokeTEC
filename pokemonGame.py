@@ -4,6 +4,7 @@ import Core.StartMenu as SM
 import Core.SelectChar as SC
 import Core.SelectPoke as SP
 import Core.BattleScreen as BS
+import Core.Leaderboard as Lb
 
 class App(tk.Tk):
 
@@ -22,9 +23,11 @@ class App(tk.Tk):
     
     def battleCallBack(self,puntaje):
         print(f"El jugador hizo {puntaje} puntos")
-        score=Pk.Leaderboard(0,self.screen1.playerName,puntaje)
+        score=Pk.Leaderboard(0,self.screen1.playerName,int(puntaje))
         self.scoreboard.append(score)
         Pk.salvarLiderboard(self.scoreboard, "docs\scores.csv")
+        self.screen5.showLeaderboard(self.scoreboard)
+        self.showScreen(self.screen5)
 
     def __init__(self):
         super().__init__()
@@ -36,6 +39,7 @@ class App(tk.Tk):
         self.screen2 = SC.SelectChar(self.frm, self.selectedCallBack)
         self.screen3 = SP.SelectPoke(self.frm, self.selectedPokemons)
         self.screen4 = BS.BattleScreen(self.frm, self.battleCallBack, self.screen3)
+        self.screen5 = Lb.Leaderboard(self.frm)
         self.currentScreen=self.screen1
         self.scoreboard:list[Pk.Leaderboard] = Pk.loadScores("docs\scores.csv")
 
